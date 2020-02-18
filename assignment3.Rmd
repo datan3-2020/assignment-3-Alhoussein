@@ -33,7 +33,7 @@ library(data.table)
 
 files <- dir(
              # Select the folder where the files are stored.
-             "[add your path here]",
+             "/Users/alhousseinnasser/Downloads/UKDA-6614-tab 2/tab",
              # Tell R which pattern you want present in the files it will display.
              pattern = "indresp",
              # We want this process to repeat through the entire folder.
@@ -73,9 +73,13 @@ for (i in 1:7) {
 Now we have got the data from all 7 waves in the same data frame **all7** in the wide format. Note that the panel is unbalanced, i.e. we included all people who participated in at least one wave of the survey. Reshape the data to the long format. The resulting data frame should have six columns for six variables.
 
 ```{r}
-Long <- all7 %>%
-  ...
-Long
+Long <- all7 %>%   # convert data into the "very long" format.
+  gather(a_memorig:g_vote6, key = "variable", value = "value") %>%
+ 
+   separate(variable, into = c("wave", "variable"), sep = "_", extra = "merge") %>% 
+  
+  spread(key = variable, value = value)
+
 ```
 
 ## Filter and recode (20 points)
@@ -84,14 +88,13 @@ Now we want to filter the data keeping only respondents from the original UKHLS 
 
 ```{r}
 Long <- Long %>%
-        filter(...) %>%
-        mutate(sex_dv = ...) %>%
-        mutate(vote6 = ...)
+        filter(memorig == 1) %>%  
+  mutate(sex_dv = ifelse(sex_dv == 2, "female", ifelse(sex_dv == 1, "male", NA))) %>% filter(vote6 >= 1)
 
-Long %>%
-        ...
-Long %>%
-        ...
+table(Long$sex_dv)
+       
+table(Long$vote6)
+        
 
 ```
 
@@ -100,10 +103,9 @@ Long %>%
 Political interest is an ordinal variable, but we will treat it as interval and calculate mean political interest for men and women in each wave.
 
 ```{r}
-meanVote6 <- Long %>%
-        ...
-        
-meanVote6
+
+meanVote6 <- Long %>% group_by(wave, sex_dv) %>% filter(sex_dv == "male" | sex_dv == "female") %>% mutate(meanvote6 = mean(vote6, na.rm = TRUE)) %>% count(sex_dv, wave, meanvote6)%>% select(sex_dv, wave, meanvote6)
+
 ```
 
 ## Reshape the data frame with summary statistics (20 points)
@@ -120,9 +122,11 @@ In the cells of this table you should have mean political interest by sex and wa
 Write a short interpretation of your findings.
 
 ```{r}
-meanVote6 %>%
-        ...
+meanVote6 %>% pivot_wider(names_from = wave, values_from = meanvote6)
+
+      
 ```
+According to the means, males show a higher level of interest in politics than females. Interest for both genders peaked at wave 4 (2012-2013). This could be due to discussions taking place regarding possibilities of Scottish independence and the UK leaving the EU. 
 
 ## Estimate stability of political interest (30 points)
 
@@ -147,6 +151,28 @@ Write the R code that does the following.
 5. Write a short interpretation of your findings.
 
 ```{r}
-...
+stability <- all7 %>% 
+  filter(a_vote6 >= 1 & b_vote6 >= 1 & c_vote6 >= 1 & d_vote6 >= 1 & e_vote6 >= 1 & f_vote6 >= 1 & g_vote6 >= 1) %>%
+  mutate( delta = abs(b_vote6 - a_vote6) + abs(c_vote6 - b_vote6) + abs(d_vote6 - c_vote6) + abs(e_vote6 - d_vote6) + abs(f_vote6 - e_vote6) + abs(g_vote6 - f_vote6)) %>% 
+  group_by(a_sex_dv) %>%
+  mutate(meanDeltaSex = mean(delta)) %>%
+  group_by(a_age_dv) %>%
+   mutate(meanDeltaAgeW1 = mean(delta)) %>%
+  gather(a_memorig:g_vote6, key = "variable", value = "value") %>%
+   separate(variable, into = c("wave", "variable"), sep = "_", extra = "merge") %>% 
+  spread(key = variable, value = value)
+
+
+
+delsex <- stability %>% count(meanDeltaSex, sex_dv) 
+
+scatter.smooth(delsex)
+
+delage <- stability %>% filter(wave == "a") %>% count(age_dv, meanDeltaAgeW1)
+
+scatter.smooth(delage)
+
 
 ```
+
+The delta means for the sexes indicate that both are fairly unstable when it comes to political interest. It should be noted that women (delta mean = 2.586) seem to be slightly more stable than men (delta mean = 2.61). Age seems to also display similar averages with the age groups that were most present within the survey mostly showcasing averages between 2.5 and 3. This may allow us to conclude that the population regardless of age and gender could be leaning more towards unstable political interest. 
