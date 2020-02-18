@@ -1,7 +1,7 @@
 ---
 title: "Statistical assignment 3"
-author: "[add your name here] [add your candidate number here - mandatory]"
-date: "[add date here]"
+author: "[add your name here] [Alhoussein Nasser Candidate number: 142905]"
+date: "[18/2/2020]"
 output: github_document
 ---
 
